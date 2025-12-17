@@ -1,0 +1,95 @@
+section .data
+msg_baslangic db "Baslangic durumu (hex): ", 0
+msg_sonuc db 10, "sonuc durum (hex)", 0
+    
+; varsayılan durum 0 0 0 0 0 1 0 1 (0x05)
+; bit 0 (lamba) = 1 (acik)
+; bit 1 (kapi) = 0 (acik)
+; bit 2 (alarm) = 1 (çalıyor)
+durum db 0x05
+
+
+section .text
+    global _start
+
+_start:
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, msg_baslangic
+    mov rdx, 24
+    syscall
+
+    mov al, [durum] 
+    call print_hex ;altprogramla hex basma
+
+    ;alarmı sustur (AND)
+    ; maske 1 1 1 1 1 0 1 1     
+    mov al, [durum]
+    and al, 0xFB
+    mov[durum], al
+
+    ; kapıyı kilitle
+    ; maske 0 0 0 0 0 0 1 0
+    mov al, [durum]
+    or al, 0x02
+    mov [durum], al
+
+    ; lambanın durumunu değiştir
+    ; maske 0 0 0 0 0 0 0 1
+    mov al, [durum] 
+    xor al, 0x01
+    mov [durum], al
+
+    ; sonucu göster
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, msg_sonuc
+    mov rdx, 25
+    syscall
+
+    print_hex:
+        push rax 
+        push rbx
+        push rdi
+        
+        mov bl, al; yedeğini al
+
+        ;üst 4 bit
+        shr al, 4  ; sağa doğru 4 bit kaydır
+        call to_char
+        mov [buffer], al
+
+        ;alt 4 bit
+        mov al, bl
+        and al, 0x0F
+        call to_char
+        mov [buffer+1], al
+
+        ;ekrana bas
+        mov rax, 1
+        mov rdi, 1
+        mov rsi, buffer
+        mov rdx, 2
+        syscall
+
+        pop rdi
+        pop rbx
+        pop rax
+        ret
+
+        to_char:
+            cmp al, 9
+            jg .letter
+            add al, '0'
+            ret
+
+        .letter:
+            add al, 'A' - 10
+            ret
+        section .bss
+        buffer resb 2
+        
+
+        
+    
+    
